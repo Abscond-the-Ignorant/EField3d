@@ -25,9 +25,6 @@ for(var r=0;r<7;r++) myRandom.push(Math.PI*2*r/7.);
 for(var r=1;r<15;r++) myRandom.push(Math.PI*2*r/15.);
 for(var r=2;r<1000;r++) myRandom.push(Math.random()*Math.PI*2);
 
-
-
-
 $(function(){
   applet = new Applet($('div#sim'));
   $('#lines_per_unit_charge').html(source_lines_per_unit_charge);  
@@ -52,10 +49,7 @@ $(function(){
     // return DoPrint($('#everything'),true);  
   });
 });
-
-
-function Applet(element, options)
-{
+function Applet(element, options){
   if(!element) { 
     console.log("Pad: NULL element provided."); return; 
   }
@@ -173,15 +167,11 @@ function Applet(element, options)
   
 
 }
-
-Applet.prototype.DoZoom = function( zoom )
-{
+Applet.prototype.DoZoom = function( zoom ){
   this.width_x -= zoom;
   this.Draw();
 }
-
-Applet.prototype.Resize = function()
-{
+Applet.prototype.Resize = function(){
   console.log("Applet::Resize()",this);
   var width = $(this.element).width();
   var height = $(this.element).height(); 
@@ -189,18 +179,13 @@ Applet.prototype.Resize = function()
   this.canvas.height = this.height = height;
   this.Draw();
 }
-
-
-Applet.prototype.Clear = function()
-{
+Applet.prototype.Clear = function(){
   //console.log("Pad.Clear()");
   if (!this.ctx) return;
   this.ctx.fillStyle = "rgb("+this.bg_color+")";
   this.ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
 }
-
-Applet.prototype.Field = function(x,y)
-{
+Applet.prototype.Field = function(x,y){
   var Ex = 0;
   var Ey = 0;
   var U  = 0;
@@ -227,12 +212,7 @@ Applet.prototype.Field = function(x,y)
   // console.log("Field at "+x+","+y,ret);
   return ret;
 }
-
-
-
-
-Applet.prototype.FindCollision = function(x,y)
-{
+Applet.prototype.FindCollision = function(x,y){
   for(var i=0 ;i<this.charges.length; i++) {
     var c = this.charges[i];
     var dx = x-c.x;
@@ -246,17 +226,12 @@ Applet.prototype.FindCollision = function(x,y)
   }
   return null;
 }
-
-
-function chargesort(a,b)
-{
+function chargesort(a,b){
   var cmp = a.q - b.q;
   if(cmp==0) cmp = a.y - b.y;
   return cmp;
 }
-
-function SpansIntegerMultiple(a,b,r)
-{
+function SpansIntegerMultiple(a,b,r){
   // Does (a,b) span an a value that is an integer multiple of r?
   var da = Math.floor(a/r);
   var db = Math.floor(b/r);
@@ -264,8 +239,7 @@ function SpansIntegerMultiple(a,b,r)
   return Math.max(da,db);
 
 }
-function PointTripletOrientation(p,q,r)
-{
+function PointTripletOrientation(p,q,r){
   // From http://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
     // See 10th slides from following link for derivation of the formula
     // http://www.dcs.gla.ac.uk/~pat/52233/slides/Geometry1x1.pdf
@@ -276,20 +250,16 @@ function PointTripletOrientation(p,q,r)
  
     return (val > 0)? 1: 2; // clock or counterclock wise
 }
-
-function PointOnSegment( p, q, r)
-{
+function PointOnSegment( p, q, r){
     if (q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x) &&
         q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y))
        return true;
  
     return false;
 }
-
 function LineSegmentsIntersect(p1,q1,  // first line segment points
                                p2,q2   // second line segment points
-                            )
-{
+                            ){
   // From http://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
   
   // Find the four orientations needed for general and
@@ -321,11 +291,7 @@ function LineSegmentsIntersect(p1,q1,  // first line segment points
 
   return false; // Doesn't fall in any of the above cases
 }
-
-
-
-Applet.prototype.FindNodePosition = function(charge)
-{
+Applet.prototype.FindNodePosition = function(charge){
   // If this is a virgin charge. Find seed positions.
   if(charge.nodes.length == 0 && charge.nodesNeeded.length == 0) { 
     this.SeedNodes(charge,0);
@@ -356,10 +322,7 @@ Applet.prototype.FindNodePosition = function(charge)
   charge.nodes.push(new_node);
   return new_node;
 }
-
-
-Applet.prototype.FindPositionOfU  = function(input,Utarget,Utolerance)
-{
+Applet.prototype.FindPositionOfU  = function(input,Utarget,Utolerance){
   // Takes an input object: {E: E{E,U,x,y}, x, y}}
   // Returns a similar output object at the best guess for Utarget.
   // Follows the field line at point input.x,input.y until it converges on the Utarget
@@ -379,10 +342,7 @@ Applet.prototype.FindPositionOfU  = function(input,Utarget,Utolerance)
   // console.log("converge in ", it, "Accuracy: ",out.E.U - Utarget);
   return out;
 }
-
-
-Applet.prototype.SeedNodes = function(charge,startangle)
-{
+Applet.prototype.SeedNodes = function(charge,startangle){
   // // Original algorithm: Space 'needed' nodes around evenly.
   for(var j = 0; j<charge.n_nodes; j++) {
     charge.nodesNeeded.push(
@@ -458,10 +418,7 @@ Applet.prototype.SeedNodes = function(charge,startangle)
   // charge.nodesRequested = charge.nodesNeeded.slice(0);
 
 }
-
-
-Applet.prototype.DoCollision = function(collide,x,y)
-{
+Applet.prototype.DoCollision = function(collide,x,y){
   // console.warn("collided with charge that has ",collide.nodesNeeded.length,"left ")
   dx = x-collide.x;
   dy = y-collide.y;
@@ -485,10 +442,7 @@ Applet.prototype.DoCollision = function(collide,x,y)
   collide.nodesNeeded.splice(best,1);
   
 }
-
-
-Applet.prototype.TraceFieldLine = function(fieldline)
-{
+Applet.prototype.TraceFieldLine = function(fieldline){
   console.log(fieldline);
   var x = fieldline.start_x;
   var y = fieldline.start_y;
@@ -555,11 +509,7 @@ Applet.prototype.TraceFieldLine = function(fieldline)
     }  // if nstep 
   } // trace loop
 }
-
-
-
-Applet.prototype.FindFieldLines = function()
-{
+Applet.prototype.FindFieldLines = function(){
   
 
   this.fieldLines = [];
@@ -731,9 +681,7 @@ Applet.prototype.FindFieldLines = function()
  
   
 }
-
-Applet.prototype.TotalEnergy = function()
-{
+Applet.prototype.TotalEnergy = function(){
   var tot = 0;
   for(var i=1 ;i<this.charges.length; i++) {
     for(var j=0 ;j<i; j++) {
@@ -751,9 +699,7 @@ Applet.prototype.TotalEnergy = function()
   }
   return tot;
 }
-
-Applet.prototype.Draw = function()
-{
+Applet.prototype.Draw = function(){
   this.Clear();
   this.ctx.save();
   
@@ -803,9 +749,7 @@ Applet.prototype.Draw = function()
   this.ctx.restore();
   
 }
-
-Applet.prototype.DrawFieldLines = function()
-{ 
+Applet.prototype.DrawFieldLines = function(){
   console.time("Drawing lines")
   this.ctx.lineWidth = 0.02;
   for(var i=0;i<this.fieldLines.length;i++) {
@@ -868,9 +812,7 @@ Applet.prototype.DrawFieldLines = function()
   console.timeEnd("Drawing lines")
 
 }
-
-Applet.prototype.DrawEquipotentialLines = function()
-{ 
+Applet.prototype.DrawEquipotentialLines = function(){
   console.time("Drawing potential lines")
 
   for(var i=0;i<this.equipotential_lines.length;i++) {
@@ -900,9 +842,7 @@ Applet.prototype.DrawEquipotentialLines = function()
   console.timeEnd("Drawing potential lines")
 
 }
-
-Applet.prototype.DrawCharges = function()
-{
+Applet.prototype.DrawCharges = function(){
   // Draw charges. Do this last so line tails are covered.
   for(var i=0 ;i<this.charges.length; i++) {
     var charge = this.charges[i];    
@@ -947,7 +887,6 @@ Applet.prototype.DrawCharges = function()
   }
   
 }
-
 function getAbsolutePosition(element) {
    var r = { x: element.offsetLeft, y: element.offsetTop };
    if (element.offsetParent) {
@@ -957,10 +896,7 @@ function getAbsolutePosition(element) {
    }
    return r;
  };
-
-
-Applet.prototype.GetEventXY = function(ev)
- {
+ Applet.prototype.GetEventXY = function(ev){
   // Convert mouse click coordinates to the mathematical plane.
    var offset = getAbsolutePosition(this.canvas);
    var x = ev.pageX;
@@ -981,9 +917,7 @@ Applet.prototype.GetEventXY = function(ev)
    y /= this.canvas_scale.y;
    return {x:x, y:y};
  }
-
-Applet.prototype.DoMouse = function(ev)
-{
+ Applet.prototype.DoMouse = function(ev){
   var xy = this.GetEventXY(ev);
   var x = xy.x;
   var y = xy.y;
@@ -1031,10 +965,7 @@ Applet.prototype.DoMouse = function(ev)
     
   if(update) this.Draw();
 }
-
-
-Applet.prototype.AddCharge = function(ev)
-{
+Applet.prototype.AddCharge = function(ev){
   console.log("AddCharge",ev);
   var q = parseFloat(ev.currentTarget.getAttribute('q'));
   var xy = this.GetEventXY(ev);
@@ -1051,9 +982,7 @@ Applet.prototype.AddCharge = function(ev)
   
   this.Draw();
 }
-
-Applet.prototype.AddChargeRandom = function(ev)
-{
+Applet.prototype.AddChargeRandom = function(ev){
   console.log(ev);
   var q = parseFloat(ev.currentTarget.getAttribute('q'));
   console.log(q);
@@ -1069,10 +998,7 @@ Applet.prototype.AddChargeRandom = function(ev)
 
   this.Draw();
 }
-
-
-Applet.prototype.PrintHQ = function()
-{
+Applet.prototype.PrintHQ = function(){
   console.log("Applet::PrintHQ");
   // First, save our current state.
   var saveCanvas = this.canvas;
