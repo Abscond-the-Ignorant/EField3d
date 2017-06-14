@@ -6,12 +6,20 @@
 <head> 
 <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
  
-<title>Electric Field</title>
+<title>3D Electric Field</title>
 
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.18/jquery-ui.min.js"></script>
 <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css" />
 <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js"></script>
 
+<script type="text/javascript" src="sylvester.js"></script>
+<script type="text/javascript" src="Pad3d.js" ></script>
+<script type="text/javascript" src="GeometryUtils.js" ></script>
+<!-- <script type="text/javascript" src="Polarizer.js" ></script> -->
+<script type="text/javascript" src="script.js" ></script>
+<link rel="stylesheet" href="style.css" type="text/css" media="all"/>
+<link type="text/css" href="css/ui-lightness/jquery-ui-1.8.6.custom.css" rel="Stylesheet" media="all"/>
 <!-- firebug lite, for debugging on random browswers. -->
 <!-- <script type='text/javascript' 
         src='http://getfirebug.com/releases/lite/1.2/firebug-lite-compressed.js'></script> -->
@@ -30,6 +38,16 @@
     if (!window.console['profileEnd']) window.console.profileEnd  = function(){};
     if (!window.console['trace']     ) window.console.trace       = function(){};
     if (!window.console['error']     ) window.console.error       = function(){};
+	
+    function getAbsolutePosition(element) {
+       var r = { x: element.offsetLeft, y: element.offsetTop };
+       if (element.offsetParent) {
+         var tmp = getAbsolutePosition(element.offsetParent);
+         r.x += tmp.x;
+         r.y += tmp.y;
+       }
+       return r;
+     };
   }
 </script>
 <script type="text/javascript" src="script.js"></script>
@@ -197,17 +215,48 @@ div#controls .addcharge  {
 
 </style>
 
+
 </head>
 <body>
   <div id="everything">
     
   <!-- The main viewing area is a canvas. -->
+  <!--
   <div>
     <div class="notpad" id="sim" ></div>
   </div>
-  
+	  -->
+	  
+
+      <input type="checkbox" id='run_checkbox' value="Run" checked='true'/> Run<br />
+      <div id="viewport" class ="pad" style="height:500px; border:5px solid black;"></div> 
+      <div id="triD-controls">
+          <span class="trid-ctl trid-zoom-in"   >Zoom In</span>
+          <span class="trid-ctl trid-zoom-out"  >Zoom Out</span>
+          <span class="trid-ctl trid-pan-left"  >Pan Left</span>
+          <span class="trid-ctl trid-pan-right" >Pan Right</span>
+          <span class="trid-ctl trid-pan-up"    >Pan Up</span>
+          <span class="trid-ctl trid-pan-down"  >Pan Down</span>
+          <span class="trid-ctl trid-pan-upstream"    >Pan Upstream</span>
+          <span class="trid-ctl trid-pan-downstream"  >Pan Downstream</span>
+          <input type="checkbox" class="trid-ctl trid-autorotate" id="trid-check1" /><label for="trid-check1">AutoRotate</label>
+          <span class="trid-ctl trid-reset"     >Reset</span>
+          <span class="trid-ctl-mouse-set">
+          		<input type="radio" class="trid-ctl trid-ctl-mouse-rotate" name="trid-radio" id="trid-radio1" value="rotate" checked="yes"/><label for="trid-radio1">Mouse Rotate</label>
+          		<input type="radio" class="trid-ctl trid-ctl-mouse-pan"    name="trid-radio" id="trid-radio2" value="pan" />             <label for="trid-radio2">Mouse Pan</label>
+          </span>
+          <span class="trid-ctl-view-set">
+            <input type="radio" class="trid-ctl trid-ctl-view-3D" name="trid-radio-view" id="trid-radio-view1" value="3D" checked="yes"/><label for="trid-radio-view1">3D</label>
+            <input type="radio" class="trid-ctl trid-ctl-view-xz" name="trid-radio-view" id="trid-radio-view2" value="XZ" /><label for="trid-radio-view2">XZ</label>
+            <input type="radio" class="trid-ctl trid-ctl-view-yz" name="trid-radio-view" id="trid-radio-view3" value="YZ" /><label for="trid-radio-view3">YZ</label>
+            <input type="radio" class="trid-ctl trid-ctl-view-xy" name="trid-radio-view" id="trid-radio-view4" value="XY" /><label for="trid-radio-view4">XY</label>
+          </span>
+      </div>
   <!-- controls -->
     <div class="controls" id="controls">
+
+		
+		
       <div style="display:inline-block">
         <div class="round-button"><div class="round-button-circle"><span q="1"  class="btn addcharge" href="#">+1</span></div></div>
         <div class="round-button big"><div class="round-button-circle big"><span q="2"  class="btn addcharge" href="#">+2</span></div></div>
@@ -222,7 +271,6 @@ div#controls .addcharge  {
     <div style="display:inline-block">
       <div style="margin:5px"><span class="bttn" id="ctl-zoom-in">Zoom In</span></div>
       <div style="margin:5px"><span class="bttn" id="ctl-zoom-out">Zoom Out</span></div>
-      <div style="margin:5px"><label><input type ="checkbox" id="ctl-do-eqipotential" />Show Equipotential Lines</label></div>
     </div>
     
     <div style="display:inline-block; vertical-align: top;">

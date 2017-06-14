@@ -26,17 +26,20 @@ for(var r=1;r<15;r++) myRandom.push(Math.PI*2*r/15.);
 for(var r=2;r<1000;r++) myRandom.push(Math.random()*Math.PI*2);
 
 $(function(){
-  applet = new Applet($('div#sim'));
-  $('#lines_per_unit_charge').html(source_lines_per_unit_charge);  
-  $('#lines_slider').slider({
-    value: source_lines_per_unit_charge,
-    min: 3,
-    max: 30,
-    step: 1,
-    slide: function(event,ui) {  source_lines_per_unit_charge = ui.value; 
-                                $('#lines_per_unit_charge').html(source_lines_per_unit_charge);
-                                applet.Draw(); 
-                              }
+	gPolar3d = new Polarize3d($('#viewport'));
+	$('#run_checkbox').change(doTimer);
+	
+	// applet = new Applet($('div#sim'));
+	$('#lines_per_unit_charge').html(source_lines_per_unit_charge);  
+	$('#lines_slider').slider({
+    	value: source_lines_per_unit_charge,
+    	min: 3,
+    	max: 30,
+    	step: 1,
+    	slide: function(event,ui) {  source_lines_per_unit_charge = ui.value; 
+    	                            $('#lines_per_unit_charge').html(source_lines_per_unit_charge);
+    	                            applet.Draw(); 
+    	                          }
   });
   
 
@@ -48,7 +51,59 @@ $(function(){
     
     // return DoPrint($('#everything'),true);  
   });
+  
+  doTimer();
 });
+
+Polarize3d.prototype = new Pad3d;           
+Polarize3d.prototype.constructor = Polarize3d;
+function Polarize3d( element, options ){
+  // console.log('TriDView ctor');
+  if(!element) {
+    // console.log("TriDView: NULL element supplied.");
+    return;
+  }
+  if($(element).length<1) { 
+    // console.log()
+    return;   
+  }
+  
+  var settings = {
+    default_look_at:    [0,0,0],
+    default_camera_distance: 800,
+    camera_distance_max: 8000,
+    camera_distance_min: 50,
+    default_theta: -0.1,
+    default_phi: 0.5,
+  }
+  $.extend(true,settings,options);  // Change default settings by provided qualities.
+  Pad3d.call(this, element, settings); // Give settings to Pad contructor.
+  this.ResetView();
+  this.gSetupDirty = true;
+  
+}
+Polarize3d.prototype.RebuildTest = function(){
+    this.AddPoint(0,0,-300,100,"GREEN",false,null);
+    this.AddPoint(150,-30,300,100,"RED",false,null);
+    this.AddPoint(400,50,0,100,"blue",false,null);
+	this.Draw();
+}
+var gTimer;
+var gTimerOn = true;
+var gLastTimerTime = 0;
+function doTimer(){
+  if($('#run_checkbox').is(':checked')) {
+    // gPolar3d.Rebuild();
+    gPolar3d.RebuildTest();
+    gTimer = setTimeout("doTimer()",10);
+    var d = new Date();
+    var t= d.getTime();
+    // $('#fps').html(1000.0/(t-gLastTimerTime))
+    gLastTimerTime = t;
+  } else {
+    if(gTimer) clearTimeout(gTimer);
+  }
+}
 function Applet(element, options){
   if(!element) { 
     console.log("Pad: NULL element provided."); return; 
@@ -522,7 +577,6 @@ Applet.prototype.FindFieldLines = function(){
   var min_x =  1e20;
   var max_y = -1e20;
   var min_y =  1e20;
-  var max
   for(var i=0 ;i<this.charges.length; i++) {
     var charge = this.charges[i];
     total_charge += charge.q;
@@ -550,7 +604,7 @@ Applet.prototype.FindFieldLines = function(){
     // Find a position very far away from the charges.
     var r = Math.max(this.xmax,this.ymax) * 10;
     if(isNaN(r)) r = 10;
-    var theta = i*2*3.14159/escaping_lines;
+    var theta = i*TWO_PI/escaping_lines;
     var x =  r*Math.cos(theta);
     var y =  r*Math.sin(theta);
     
@@ -703,7 +757,9 @@ Applet.prototype.Draw = function(){
   this.Clear();
   this.ctx.save();
   
-  this.do_equipotential = $('#ctl-do-eqipotential').is(":checked");
+  this.do_equipotential = false;
+  // uncomment this to is you want it to make equipotentials, only worked when it was in 2d
+  // this.do_equipotential = $('#ctl-do-eqipotential').is(":checked");
   
   this.canvas_translate = { x: this.canvas.width/2, y: this.canvas.height/2};
   this.canvas_scale     = { x: this.canvas.width/this.width_x, y: -this.canvas.width/this.width_x};
@@ -767,6 +823,8 @@ Applet.prototype.DrawFieldLines = function(){
     }
     this.ctx.stroke();
     
+	
+	
     var n = line.points.length;
     // Add arrow. Find the midway point along the line.
     var j = Math.round((n-1)/2);
@@ -790,7 +848,7 @@ Applet.prototype.DrawFieldLines = function(){
     var angle = (Math.atan2(dy,dx)+TWO_PI)%TWO_PI;
     this.ctx.rotate(angle);
     var lx = 0.2;
-    var ly = 0.1;
+    var ly = 0.08;
     this.ctx.beginPath();
     this.ctx.moveTo(lx,0);
     this.ctx.lineTo(0,ly);
