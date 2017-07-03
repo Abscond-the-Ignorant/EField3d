@@ -38,6 +38,7 @@ function Pad3d( element, options ){
 
   this.default_look_at = [0,0,0];
   this.default_camera_distance = 800;
+  // this.default_camera_distance = 800;
   this.default_theta =0;
   this.default_phi = 0;
 
@@ -45,9 +46,12 @@ function Pad3d( element, options ){
   this.camera_distance = this.default_camera_distance;
   this.theta           = this.default_theta;
   this.phi             = this.default_phi;
+  
+  // this.phi_max = Math.PI/2 - Math.PI/2 * 0.001;
+  this.theta_max = Math.PI/2 - Math.PI/2 * 0.1;
 
-  this.camera_distance_max = 8000;
-  this.camera_distance_min = 0;
+  this.camera_distance_max = 3000;
+  this.camera_distance_min = -3000;
   
   this.mouse_highlight_range = 5; //pixels
   this.pan_increment = 4;
@@ -112,7 +116,7 @@ function Pad3d( element, options ){
     
 
   $(this.element) .bind('mousewheel',  function(ev,d) { return self.scrollMe(ev,-(ev.originalEvent.wheelDelta)/100.); });
-  $(this.element) .bind('dblclick',  function(ev)     { return self.fullScreen(); });
+  // $(this.element) .bind('dblclick',  function(ev)     { return self.fullScreen(); });
   
   $(this.element) .bind('contextmenu', function(ev){ return false;} )
   
@@ -199,8 +203,8 @@ Pad3d.prototype.rotateMe = function(theta,phi){
   // console.log("Pan3d.rotateMe",theta,phi);
   this.theta += theta;
   this.phi += phi;
-  if(this.theta>Math.PI/2) this.theta = Math.PI/2;
-  if(this.theta<-Math.PI/2) this.theta = -Math.PI/2;  
+  if(this.theta>this.theta_max) this.theta = this.theta_max;
+  if(this.theta<-this.theta_max) this.theta = -this.theta_max;  
 }
 Pad3d.prototype.ResetView = function(){
   if(this.view_mode == "3D") {
@@ -272,7 +276,7 @@ Pad3d.prototype.RotateX = function( mat, angle ){
   return mat;
 }
 Pad3d.prototype.RotateY = function( mat, angle ){
-  // Rotate a matrix about the x-axis
+  // Rotate a matrix about the y-axis
   c = Math.cos(angle);
   s = Math.sin(angle);
   var rot = Matrix.create([
@@ -291,7 +295,8 @@ Pad3d.prototype.AddLine = function(x1,y1,z1,x2,y2,z2,width,color,source){
     b: Vector.create([x2,y2,z2,1]),
     linewidth: width,
     stroke: color,
-    source: source
+    source: source,
+	fixed: false
   };
   this.objects.push(line);
 }
@@ -333,6 +338,31 @@ Pad3d.prototype.Draw = function(){
   this.Clear();
   this.DrawLines();
 }
+Pad3d.prototype.AddCoord = function(){
+	// this.AddFixedLine(10,this.height - 10,0,500,this.height - 10,0, 10, "BLACK",null);
+	var origin = {x: 0, y: 0, z: 0};
+	var axisLength = {x: -100, y: 100,z: -100};
+	this.AddLine(origin.x,origin.y,origin.z,origin.x + axisLength.x,origin.y,origin.z, 3, "GREEN",null);
+	this.AddLine(origin.x,origin.y,origin.z,origin.x,origin.y + axisLength.y,origin.z, 3, "GREEN",null);
+	this.AddLine(origin.x,origin.y,origin.z,origin.x,origin.y,origin.z + axisLength.z, 3, "GREEN",null);
+}
+Pad3d.prototype.AddBox = function(){
+	var origin = {x: 0, y: 0, z: 0};
+	var BoxScalar = 10000;
+	var lineSize = 100;
+	this.AddLine(BoxScalar,BoxScalar,BoxScalar,BoxScalar,BoxScalar,-BoxScalar    ,lineSize,"GREEN",null);
+	this.AddLine(-BoxScalar,BoxScalar,BoxScalar,BoxScalar,BoxScalar,-BoxScalar   ,lineSize,"GREEN",null);
+	this.AddLine(BoxScalar,-BoxScalar,BoxScalar,BoxScalar,BoxScalar,-BoxScalar   ,lineSize,"GREEN",null);
+	this.AddLine(-BoxScalar,-BoxScalar,BoxScalar,BoxScalar,BoxScalar,-BoxScalar  ,lineSize,"GREEN",null);
+	this.AddLine(BoxScalar,BoxScalar,BoxScalar,-BoxScalar,BoxScalar,BoxScalar    ,lineSize,"GREEN",null);
+	this.AddLine(BoxScalar,BoxScalar,BoxScalar,BoxScalar,BoxScalar,BoxScalar     ,lineSize,"GREEN",null);
+	this.AddLine(-BoxScalar,-BoxScalar,BoxScalar,-BoxScalar,BoxScalar,BoxScalar  ,lineSize,"GREEN",null);
+	this.AddLine(-BoxScalar,-BoxScalar,BoxScalar,BoxScalar,-BoxScalar,BoxScalar  ,lineSize,"GREEN",null);
+	this.AddLine(BoxScalar,BoxScalar,-BoxScalar,-BoxScalar,BoxScalar,-BoxScalar  ,lineSize,"GREEN",null);
+	this.AddLine(BoxScalar,BoxScalar,-BoxScalar,BoxScalar,BoxScalar,-BoxScalar   ,lineSize,"GREEN",null);
+	this.AddLine(-BoxScalar,-BoxScalar,-BoxScalar,-BoxScalar,BoxScalar,-BoxScalar,lineSize,"GREEN",null);
+	this.AddLine(-BoxScalar,-BoxScalar,-BoxScalar,BoxScalar,-BoxScalar,-BoxScalar,lineSize,"GREEN",null);
+}
 Pad3d.prototype.Linesort = function(l1,l2){
   // figure out which line is in front and which is behind.
   // Step 1: is zmax of 1 < zmin of 2?
@@ -358,18 +388,19 @@ Pad3d.prototype.DrawLines = function(){
   
   // var trans = this.transform_matrix;
   
+  // this.AddBox();
+  
   var trans = Matrix.I(4);
   // console.log("Pad3d Draw ",this.camera_distance,this.theta,this.phi,this.look_at);
   trans = this.Translate(trans,-this.look_at[0],-this.look_at[1],-this.look_at[2]);
   trans = this.RotateY(trans,this.phi);
   trans = this.RotateX(trans,this.theta);
   trans = this.Translate(trans,0,0,this.camera_distance);
-  
   for(var i=0;i<this.objects.length;i++)
   {
     var line = this.objects[i];
     // Rotate each point by the current matrix.
-    var p1 = trans.x(line.a);
+	var p1 = trans.x(line.a);
     var p2 = trans.x(line.b);
 
     // Sort: point a will be have smallest z
@@ -455,9 +486,41 @@ Pad3d.prototype.DrawLines = function(){
       }
     }
   }
+  /*
+  {
+      type: "l",
+      a: Vector.create([x1,y1,z1,1]),
+      b: Vector.create([x2,y2,z2,1]),
+      linewidth: width,
+      stroke: color,
+      source: source
+    }
+	
+        GeoUtils.draw_highlighted_line(
+           this.ctx,
+           0, 5,
+           0, 5,
+           this.ctx.lineWidth, //linewidth
+           obj.stroke, // default style
+           "rgba(250,0,0,0.9)", //highlight style
+           "rgba(0,0,0,0.7)", //outline style
+           this.should_highlight(obj),
+           this.should_outline(obj)
+         );*/
+  
+  /*
+  this.ctx.save();
+  this.ctx.lineWidth = 5;
+  this.ctx.beginPath();
+  this.ctx.moveTo(10,this.height - 10);
+  this.ctx.lineTo(10,this.height - 50);
+  this.ctx.stroke();
+  this.ctx.restore();
+  */
+  
+  
   this.ctx.restore();
 }
-
 Pad3d.prototype.should_highlight = function(obj){
   return false;
 }
@@ -585,7 +648,6 @@ Pad3d.prototype.HoverObject = function(selected){
 Pad3d.prototype.scrollMe = function(ev,delta){
   console.log("scrollme",ev,delta);
   var zoom = delta*50;
-
   if(this.view_mode=="3D") {
     this.camera_distance += zoom;
     if(this.camera_distance > this.camera_distance_max) this.camera_distance = this.camera_distance_max;

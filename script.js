@@ -1,21 +1,25 @@
+/*
+TODO
+Add arrows
+Make it is so the node rotates when hit 
+	-RotatePhi
+Add a prespective
+Make it so I can add/move charges
+Optimize SeedNodes
+*/
 var TWO_PI = Math.PI * 2;
 
-var source_lines_per_unit_charge = 10;
+var source_lines_per_unit_charge = 6;
 var k = 10; // 1/4 pi epsilon naught
 
-
 // configuration:
-var step = 0.06;
+var step = 3;
 var start_step = 0.001;
 var max_steps = 1000;
-
-
 var Utolerance = 0.001;
 var step_equi = 0.1;
 var max_equi_step = 100;
-
 var potential_multiple = 3;
-
 var hide_charge_values = false;
 
 
@@ -26,19 +30,44 @@ for(var r=1;r<15;r++) myRandom.push(Math.PI*2*r/15.);
 for(var r=2;r<1000;r++) myRandom.push(Math.random()*Math.PI*2);
 
 $(function(){
-	gPolar3d = new Polarize3d($('#viewport'));
-	$('#run_checkbox').change(doTimer);
-	
+	gPolar3d = new EField3d($('#viewport'));
+	// $('#run_checkbox').change(doTimer);
+	/*
+		Right now it updates every 50 ms, try to use the following code to make it so ip only updates when something is changed.
+		
+		
+  var self = this;
+  $(window).bind('resize',function(ev) { return self.Resize(ev); });
+  
+  $(window).bind('mousemove',function(ev) { return self.DoMouse(ev); });
+  $(this.element).bind('mousedown',function(ev) { return self.DoMouse(ev); });
+  $(window).bind('mouseup',function(ev) { return self.DoMouse(ev); });
+  $(this.element).bind('mouseout' ,function(ev) { return self.DoMouse(ev); });  
+  $('.addcharge').bind('mousedown' ,function(ev) { return self.AddCharge(ev); });  
+
+  $(this.element).bind('touchstart',function(ev) { return self.DoMouse(ev); });
+  $(window).bind('touchmove',function(ev) { return self.DoMouse(ev); });
+  $(window).bind('touchend',function(ev) { return self.DoMouse(ev); });
+  $('.addcharge').bind('touchstart' ,function(ev) { return self.AddCharge(ev); });  
+
+  $('#ctl-do-eqipotential').click(function(){ self.Draw();});
+  $('#ctl-zoom-in').click(function(){ self.DoZoom(1); });
+  $('#ctl-zoom-out').click(function(){ self.DoZoom(-1); });
+		
+		
+		
+	*/
 	// applet = new Applet($('div#sim'));
 	$('#lines_per_unit_charge').html(source_lines_per_unit_charge);  
 	$('#lines_slider').slider({
     	value: source_lines_per_unit_charge,
     	min: 3,
-    	max: 30,
+    	max: 26,
     	step: 1,
     	slide: function(event,ui) {  source_lines_per_unit_charge = ui.value; 
     	                            $('#lines_per_unit_charge').html(source_lines_per_unit_charge);
-    	                            applet.Draw(); 
+									gPolar3d.StartDraw();
+									// doTimer();
     	                          }
   });
   
@@ -52,12 +81,18 @@ $(function(){
     // return DoPrint($('#everything'),true);  
   });
   
-  doTimer();
+  
+  
+  	gPolar3d.StartDraw();
+  // doTimer();
 });
 
-Polarize3d.prototype = new Pad3d;           
-Polarize3d.prototype.constructor = Polarize3d;
-function Polarize3d( element, options ){
+var gTimer;
+var gTimerOn = true;
+var gLastTimerTime = 0;
+EField3d.prototype = new Pad3d;           
+EField3d.prototype.constructor = EField3d;
+function EField3d( element, options ){
   // console.log('TriDView ctor');
   if(!element) {
     // console.log("TriDView: NULL element supplied.");
@@ -82,20 +117,11 @@ function Polarize3d( element, options ){
   this.gSetupDirty = true;
   
 }
-Polarize3d.prototype.RebuildTest = function(){
-    this.AddPoint(0,0,-300,100,"GREEN",false,null);
-    this.AddPoint(150,-30,300,100,"RED",false,null);
-    this.AddPoint(400,50,0,100,"blue",false,null);
-	this.Draw();
-}
-var gTimer;
-var gTimerOn = true;
-var gLastTimerTime = 0;
 function doTimer(){
   if($('#run_checkbox').is(':checked')) {
     // gPolar3d.Rebuild();
-    gPolar3d.RebuildTest();
-    gTimer = setTimeout("doTimer()",10);
+    // gPolar3d.StartDraw();
+    // gTimer = setTimeout("doTimer()",1000);
     var d = new Date();
     var t= d.getTime();
     // $('#fps').html(1000.0/(t-gLastTimerTime))
@@ -104,6 +130,476 @@ function doTimer(){
     if(gTimer) clearTimeout(gTimer);
   }
 }
+EField3d.prototype.StartDraw = function(){
+
+    this.rmin = -this.camera_distance_min;
+    this.rmax =  this.camera_distance_max;
+    this.rcurrent =  this.camera_distance;
+	
+	
+	this.objects = [];
+    this.charges = [];
+
+    if(this.charges.length==0) this.charges = [
+                                { q :  1, x : 100,  y: -20, z: 0},
+                                { q : -2, x : -100,   y: 20, z: 0},
+                                // { q : -1, x : 150,   y:-200, z: 0},
+                                ];
+								/*
+	     this.AddPoint(0,0,300,10,"GREEN",false,null);
+	     this.AddPoint(0,300,0,10,"RED",false,null);
+	     this.AddPoint(300,0,0,10,"blue",false,null);
+	     this.AddPoint(0,0,-300,10,"GREEN",false,null);
+	     this.AddPoint(0,-300,0,10,"RED",false,null);
+	     this.AddPoint(-300,0,0,10,"blue",false,null);
+								/*
+	  this.AddLine(-this.rcurrent,0,0,this.rcurrent,0,0,3,'GREEN',null);
+	  this.AddLine(0,-this.rcurrent,0,0,this.rcurrent,0,3,'RED',null);
+	  this.AddLine(0,0,-this.rcurrent,0,0,this.rcurrent,3,'BLUE',null);
+								*/
+
+    this.FindFieldLines();
+	this.Draw();
+	
+	
+}
+EField3d.prototype.FindFieldLines = function(){
+	
+    this.fieldLines = [];
+    this.potentialnodes = []; 
+  
+    var total_charge = 0;
+    var max_x =  -1e20;
+    var min_x =  1e20;
+    var max_y =  -1e20;
+    var min_y =  1e20;
+	
+    for(var i=0 ;i<this.charges.length; i++) {
+      var charge = this.charges[i];
+      total_charge += charge.q;
+	  charge.times_seeded = 0;
+      charge.r = 10*Math.abs(charge.q);
+      charge.n_nodes = Math.round(Math.abs(source_lines_per_unit_charge*charge.q));
+      charge.nodes = []; // All successful or unsuccesful nodes
+      charge.nodesUsed = []; // Nodes that have actually worked.
+      charge.nodesNeeded = []; // Some idea what nodes we should try.
+      charge.collisions = []; // where the charge was hit
+      if(charge.x > max_x) max_x = charge.x;
+      if(charge.x < min_x) min_x = charge.x;
+      if(charge.y > max_y) max_y = charge.y;
+      if(charge.y < min_y) min_y = charge.y;
+	  
+	  if(charge.q>0){
+		  this.AddPoint(charge.x,charge.y,charge.z,charge.r,"RED",false,null);
+	  }else if(charge.q<0){
+		  this.AddPoint(charge.x,charge.y,charge.z,charge.r,"BLUE",false,null);
+	  }
+    }
+  
+    // rank them. Use minority charge carriers first: their nodes HAVE to connect.
+    this.charges.sort(chargesort);
+    if(total_charge<0) this.charges.reverse();
+    // Find fieldlines that come from outside the area, assuming there is a majority charge carrier.
+	/*
+    var escaping_lines = Math.abs(total_charge* source_lines_per_unit_charge);
+	
+	var n = 1;
+	var q = 0;
+	while(escaping_lines > 2 * (Math.pow(n,2) - n + 1)){ n++; }
+      var r = this.rmax;
+      if(isNaN(r)) r = 1000;
+    for(var i=0;i<escaping_lines;i++) {
+      console.log("Doing escaping line.");
+      // Find a position very far away from the charges.
+	  if(((i+q)%(n) == 0) && i > n){ q++; }
+	  // if(((i+q)%(n*2) == 0) && Math.floor((i+q)/(2*n)) != 0){ q++; }
+	  var theta = Math.floor((i+q)/(2*n)) * Math.PI/n;
+	  var phi = ((i + q) %(2*n)) * Math.PI/n;
+
+	  var x =  r*Math.sin(phi)*Math.cos(theta);
+	  var y =  r*Math.sin(phi)*Math.sin(theta);
+ 	  var z =  r*Math.cos(phi);
+ 	  var fieldline = { startCharge: null };
+	  fieldline.start_x = x;
+	  fieldline.start_y = y;
+	  fieldline.start_z = z;
+	  if(total_charge > 0)  fieldline.dir = -1;
+	  else                  fieldline.dir = 1;
+	  fieldline.start = "outside";
+	  var nodeFinished = this.TraceFieldLine(fieldline);
+	  if(nodeFinished) {
+	    this.fieldLines.push(fieldline);      
+	  } else {
+	    console.log("incoming line failed");
+	  }
+    
+    }
+
+*/
+    // Now loop through again, finding unused nodes and tracing field lines from those
+    // nodes until they either hit another charge or they require too many computational cycles.
+
+    for(var i=0 ;i<this.charges.length; i++) {
+      var charge = this.charges[i];
+      // console.log("Find field lines for charge ",i," with charge ",charge.q);
+      console.log("Doing charge",i,"with q=",charge.q,"which has ",charge.nodesUsed.length,"/",charge.n_nodes," nodes");
+
+
+      while(charge.nodesUsed.length < charge.n_nodes && charge.nodes.length<source_lines_per_unit_charge*5) {
+        if(charge.nodes.length>source_lines_per_unit_charge*4) {
+          console.warn("Wow! Tried way too many nodes.",charge.nodes);
+        }
+      console.log("Doing charge",i,"with q=",charge.q,"which has ",charge.nodesUsed.length,"/",charge.n_nodes," nodes");
+        // console.log("Doing node on charge",i);
+      
+	  
+	  /*###//
+	  //###//
+	  //###*/
+        var start_angle = this.FindNodePosition(charge);
+		// console.log(start_angle);
+        var r = charge.r;
+        // Boost in initial direction by radius.
+        var fieldline = { startCharge: charge };
+        fieldline.start = "charge";
+
+
+        // console.log("Try: ",nodeTries,"Trying angle:",start_angle*180/Math.PI,nodeTries);
+		
+		
+		fieldline.start_x = charge.x + charge.r*Math.sin(start_angle.phi)*Math.cos(start_angle.theta);
+		fieldline.start_y = charge.y + charge.r*Math.sin(start_angle.phi)*Math.sin(start_angle.theta);
+		fieldline.start_z = charge.z + charge.r*Math.cos(start_angle.phi);
+        fieldline.start_angle = start_angle;
+		
+        var dir = 1;
+        if(charge.q<0) dir = -1;
+        fieldline.dir     = dir;
+      
+        var nodeFinished = this.TraceFieldLine(fieldline); 
+        if(nodeFinished) {
+          charge.nodesUsed.push(start_angle);
+          this.fieldLines.push(fieldline);      
+        }
+      } // nodeFinished
+    }
+	
+	
+	
+	for(var k = 0; k < this.fieldLines.length; k++){
+		for(var q = 0; q < this.fieldLines[k].points.length - 1; q++){
+			var p = this.fieldLines[k].points;
+			// console.log(this.fieldLines[k]);
+			this.AddLine(p[q].x,p[q].y,p[q].z,p[q+1].x,p[q+1].y,p[q+1].z,1,"BLACK",null);
+		}
+		// this.AddArrows(this.fieldLines[k]);
+	}
+}
+EField3d.prototype.AddArrows = function(fieldline){
+	var n = fieldline.points.length;
+	// console.log(fieldline.points);
+  	// this.AddPoint(fieldline.points[Math.round(n / 2)].x,fieldline.points[Math.round(n / 2)].y,fieldline.points[Math.round(n / 2)].z,5,"GREEN",false,null);
+	// this.AddArrow(fieldline.points[Math.round(n / 2)], fieldline.points[Math.round(n/2)-fieldline.dir]); 
+	if(n > 500){ for(var i = 1; i < Math.floor(n / 200); i++) {
+		// console.log(((n / Math.floor(n / 500)) * i));
+		// console.log(fieldline.points[((n / Math.floor(n / 500)) * i) - fieldline.dir]);
+		console.log(Math.round(n / Math.floor(n / 200)) * i);
+		this.AddPoint(fieldline.points[Math.round(n / Math.floor(n / 200)) * i].x,
+		fieldline.points[Math.round(n / Math.floor(n / 200)) * i].y,
+		fieldline.points[Math.round(n / Math.floor(n / 200)) * i].z,5,"GREEN",false,null);
+		// this.AddArrow(fieldline.points[Math.round(n / Math.floor(n / 500)) * i],fieldline.points[Math.round((n / Math.floor(n / 500)) * i) - fieldline.dir]);
+	}}
+	else{ 
+		console.log(fieldline.points[Math.round(n / 2)]);
+		this.AddPoint(fieldline.points[Math.round(n / 2)].x,fieldline.points[Math.round(n / 2)].y,fieldline.points[Math.round(n / 2)].z,5,"GREEN",false,null);
+		// this.AddArrow(fieldline.points[Math.round(n / 2)], fieldline.points[Math.round(n/2)-fieldline.dir]);
+	}
+}
+EField3d.prototype.AddArrow = function(point,prevPoint){
+	// console.log(point);
+	var arrow = Vector.create([point.x - prevPoint.x, point.y - prevPoint.y, point.z - prevPoint.z]);
+	if(!arrow.isParallelTo(Vector.i)){
+		var p1 = arrow.cross(Vector.i);
+		p1 = p1.toUnitVector();
+		p1 = p1.x(0.01);
+		for(var i = 0; i < 8; i ++){
+			this.AddLine(point.x,point.y,point.z,point.x+p1.e(1),point.y+p1.e(2),point.z+p1.e(3),1,"BLACK",null);
+			var arrowLine = Line.create([point.x,point.y,point.z],[arrow.e(1),arrow.e(2),arrow.e(3)]);
+			console.log(p1);
+			p1 = p1.rotate(2*Math.PI/8,arrowLine);
+		}
+	}else if(!arrow.isParallelTo(vector.j)){
+		var p1 = arrow.cross(Vector.j);
+		p1 = p1.toUnitVector();
+		p1 = p1.x(0.01);
+		for(var i = 0; i < 8; i ++){
+			this.AddLine(point.x,point.y,point.z,point.x+p1.e(1),point.y+p1.e(2),point.z+p1.e(3),1,"BLACK",null);
+			var arrowLine = Line.create([point.x,point.y,point.z],[arrow.e(1),arrow.e(2),arrow.e(3)]);
+			p1 = p1.rotate(2*Math.PI/8,arrowLine);
+		}
+		
+	}
+}
+EField3d.prototype.TraceFieldLine = function(fieldline){
+  console.log(fieldline);
+  var x = fieldline.start_x;
+  var y = fieldline.start_y;
+  var z = fieldline.start_z;
+  
+  fieldline.points  = [{x:x,y:y,z:z}];
+  var lastE = this.Field(x,y,z);
+
+  var traceFinished = false;
+  var nstep = 0;
+  while(true) {
+    nstep++;
+    var E = this.Field(x,y,z);
+    
+    var dx = E.gx * step *fieldline.dir;
+    var dy = E.gy * step *fieldline.dir;
+    var dz = E.gz * step *fieldline.dir;
+    
+    // This check doesn't work.
+    // I've also tried the form of E/U, which should check for small field in high-potential areas (which is what I want to check)
+    // I can't just check for small field, because that happens naturally at large distances from the middle.
+    // if(Math.abs(E.E) < 1 && Math.abs(E.U) > 2) {
+    //   console.log("Line went through effective zero-field region. This isn't a good line. E=",E.E," U=",E.U, " step=",step);
+    //   return false;
+    // }
+    
+    x += dx;
+    y += dy;
+    z += dz;
+    fieldline.points.push({x:x,y:y,z:z});
+    lastE = E;
+    var collide = this.FindCollision(x,y,z);
+    if(collide && (fieldline.dir*collide.q < 0) && nstep>1) {
+      // Find the best possible node for this line.
+      if(collide.n_nodes >= collide.nodes.length+1 == 0) {
+        console.log("Line failed - hit q=",collide.q,"which has no nodes left.");
+        // Comment these lines out if you want it to just sail through without stopping...
+        // console.warn("Line failed - hit q=",collide.q,"which has no nodes left.");
+        // return false; //nodeFinished=false;
+      } else {
+        this.DoCollision(collide,x,y,z);
+        fieldline.endCharge = collide;
+        fieldline.nstep = nstep;
+        console.log("Line succeeded - hit q=",collide.q);
+        return true; // nodeFinished
+      }
+    }
+	
+    if(nstep>max_steps){
+      fieldline.endCharge = null;
+      fieldline.endAngle     = null;
+      fieldline.endNodeAngle = null;
+      fieldline.nstep = nstep;
+      console.log("Line succeeded - no hit");
+      return true;
+    }  // if nstep
+	 
+  } // trace loop
+}
+EField3d.prototype.Field = function(x,y,z){
+  var Ex = 0;
+  var Ey = 0;
+  var Ez = 0;
+  var U  = 0;
+  var dUdx = 0;
+  for(var i=0 ;i<this.charges.length; i++) {
+    var c = this.charges[i];
+    var dx = x-c.x;
+    var dy = y-c.y;
+    var dz = z-c.z;
+    var r2 = dx*dx+dy*dy+dz*dz;
+    var r = Math.sqrt(r2);
+    var E = c.q/r2;
+    Ex += dx/r*E;
+    Ey += dy/r*E;
+    Ez += dz/r*E;
+    U += c.q/r;
+  }
+  var E2 = Ex*Ex + Ey*Ey + Ez*Ez;
+  var E = Math.sqrt(E2);
+  var ret = { x: x, y: y, z: z,  			// Coordinates.
+              U: U,              			// Potential
+              E: E,              			// Field magnitude
+	  		  Ex: Ex, Ey: Ey, Ez: Ez,    	// Field vector
+		  	  gx: Ex/E, gy: Ey/E, gz: Ez/E 	// Field direction vector
+              };
+  // console.log("Field at "+x+","+y,ret);
+  return ret;
+}
+EField3d.prototype.FindCollision = function(x,y,z){
+  for(var i=0 ;i<this.charges.length; i++) {
+    var c = this.charges[i];
+    var dx = x-c.x;
+    var dy = y-c.y;
+    var dz = z-c.z;
+    var r2 = dx*dx+dy*dy+dz*dz;
+    var cr = c.r-0.01;
+	// console.log(c.x,c.y,c.z);
+	// console.log(x,y,z);
+    if(r2 < (cr*cr)) {
+      // console.log("collision",dx,dy,r2,cr*cr);
+      return c;
+    }
+  }
+  return null;
+}
+EField3d.prototype.DoCollision = function(collide,x,y,z){
+  // console.warn("collided with charge that has ",collide.nodesNeeded.length,"left ")
+  collide.collisions.push({x:x,y:y,z:z});
+  dx = x-collide.x;
+  dy = y-collide.y;
+  dz = z-collide.z;
+  var angle = GetAngle({x:dx,y:dy,z:dz});
+  
+  
+  collide.nodes.push(angle);
+  collide.nodesUsed.push(angle);
+  
+  if(collide.nodesUsed.length==1) {
+    // This is the first line to collide. Seed other positions around this.
+	  
+	  /*############
+	  ##############
+	  ##############
+	  ############*/
+    this.SeedNodes(collide,{phi:0,theta:0});
+    // this.SeedNodes(collide,angle);
+  }
+    
+  var best = 0;
+  var bestdiff = 9e9;
+  for(var k=0; k<collide.nodesNeeded.length;k++){
+      var diff = GetDiff(collide.nodesNeeded[k],angle);
+      if(diff<bestdiff) {bestdiff = diff; best = k};
+  }
+  collide.nodesNeeded.splice(best,1);
+}
+function GetAngle(a){
+	/*
+	if(a.y == 0 && a.x == 0) {
+		if(a.z > 0) return {theta: 0, phi: 0}
+		else return {theta: 0, phi: MATH.PI}
+	}*/
+	return {theta: Math.atan(a.y/a.x), phi: Math.atan(Math.sqrt(Math.pow(a.x,2)+Math.pow(a.y,2))/a.z)}; 
+}	
+function GetDistance(angle1,angle2){
+	//I'm not really sure what the purpose of this function is... I don't call it anywhere...
+	var dx = Math.sin(angle1.phi)*Math.cos(angle1.theta) - Math.sin(angle2.phi)*Math.cos(angle2.theta);
+}
+function GetDiff(angle1,angle2){
+	var a = {x: Math.sin(angle1.phi)*Math.cos(angle1.theta), y: Math.sin(angle1.phi)*Math.sin(angle1.theta), z: Math.cos(angle1.phi)};
+	var b = {x: Math.sin(angle2.phi)*Math.cos(angle2.theta), y: Math.sin(angle2.phi)*Math.sin(angle2.theta), z: Math.cos(angle2.phi)};
+	return Math.abs( Math.acos( Dot(a,b) ) % (TWO_PI) );
+}
+function Dot(a,b){ return a.x * b.x + a.y * b.y + a.z * b.z; }
+EField3d.prototype.SeedNodes = function(charge,startangle){
+	var n = 0;
+	var q = 0;
+	while(charge.n_nodes > 2 * (n*n - n + 1)){ n++; }
+	n += charge.times_seeded;
+	charge.times_seeded++;
+	for(var i = 0; i<2 * (n*n - n + 1); i++) {
+	  if(((i+q) % (1 * n) == 0) && i > n){ q++; }
+	  var theta = Math.floor((i+q)/(2*n)) * Math.PI/n;
+  	  var phi = ((i + q) %(2*n)) * Math.PI/n;
+	  // console.log("phi: ",phi);
+	  // console.log("theta: ",theta);
+	  
+	  /* 
+	  var a = {x: r*Math.sin(phi)*Math.cos(theta) ,y: r*Math.sin(phi)*Math.sin(theta) ,z: r*Math.cos(phi)};
+	  var b = RotateTheta(
+		  {x: r*Math.sin(phi)*Math.cos(theta) ,y: r*Math.sin(phi)*Math.sin(theta) ,z: r*Math.cos(phi)},
+		  startangle.theta);
+	  
+	  
+	  var a = RotatePhi(RotateTheta(
+		  		  {x: r*Math.sin(phi)*Math.cos(theta) ,y: r*Math.sin(phi)*Math.sin(theta) ,z: r*Math.cos(phi)},
+			  startangle.theta),startangle.phi);
+	  */
+	  charge.nodesNeeded.push({theta:theta,phi:phi});
+	  // charge.nodesNeeded.push(GetAngle({x: r*Math.sin(phi)*Math.cos(theta) ,y: r*Math.sin(phi)*Math.sin(theta) ,z: r*Math.cos(phi)}));
+/*
+	  charge.nodesNeeded.push( 
+		  GetAngle(
+			  RotatePhi(
+				  RotateTheta(
+					  {x: r*Math.sin(phi)*Math.cos(theta) ,y: r*Math.sin(phi)*Math.sin(theta) ,z: r*Math.cos(phi)},
+				  startangle.theta)
+			  ,startangle.phi)));
+	  */
+  }
+}
+EField3d.prototype.FindNodePosition = function(charge){
+  // If this is a virgin charge. Find seed positions.
+  if(charge.nodes.length == 0 && charge.nodesNeeded.length == 0) {
+    this.SeedNodes(charge,{theta: 0, phi: 0});
+  }
+
+  // See if there are some precomputed positions to try.
+  if(charge.nodesNeeded && charge.nodesNeeded.length>0) {
+    var t = charge.nodesNeeded.shift();
+	// console.log(t);
+    charge.nodes.push(t);
+    return t;
+  }
+  
+//try to seed it again,this time with more nodes
+  this.SeedNodes(charge,{theta: 0, phi: 0});
+  if(charge.nodesNeeded && charge.nodesNeeded.length>0) {
+    var t = charge.nodesNeeded.shift();
+    charge.nodes.push(t);
+    return t;
+  }
+  
+}
+EField3d.prototype.DrawCharges = function(){
+    for(var i=0 ;i<this.charges.length; i++) {
+	  if(charge.q>0){
+		  this.AddPoint(charge.x,charge.y,charge.z,charge.r,"RED",false,null);
+	  }else if(charge.q<0){
+		  this.AddPoint(charge.x,charge.y,charge.z,charge.r,"BLUE",false,null);
+	  }
+    }
+	this.Draw();
+}
+/*
+function addArrow(){
+	
+}*/
+function RotateTheta(a, angle){
+	var b = {
+		x: a.x*Math.cos(angle)-a.y*Math.sin(angle),
+		y: a.x*Math.sin(angle)-a.y*Math.cos(angle),
+		z: a.z
+	};
+	return b;
+}
+function RotatePhi(a, angle){
+	if(angle == 0) return a;
+	// console.log("x: ", a.x);
+	// console.log("y: ", a.y);
+	var k = {x:-a.y / Math.sqrt(Math.pow(a.x,2) + Math.pow(a.y,2)),y: a.x / Math.sqrt(Math.pow(a.x,2) + Math.pow(a.y,2)), z: 0};
+	var dot = k.x*a.x + k.y*a.y;
+	var c = Math.cos(angle);
+	var s = Math.sin(angle);
+	var b = {
+		x: c*a.x + dot*(1-c)*k.x + s*k.y*a.z,
+		y: c*a.y + dot*(1-c)*k.y - s*k.z*a.z,
+		z: c*a.z + (k.x*a.y-k.y*a.x)*s
+	};
+	return b;
+}
+function chargesort(a,b){
+  var cmp = a.q - b.q;
+  if(cmp==0) cmp = a.y - b.y;
+  return cmp;
+}
+
+/*
 function Applet(element, options){
   if(!element) { 
     console.log("Pad: NULL element provided."); return; 
@@ -280,11 +776,6 @@ Applet.prototype.FindCollision = function(x,y){
     }
   }
   return null;
-}
-function chargesort(a,b){
-  var cmp = a.q - b.q;
-  if(cmp==0) cmp = a.y - b.y;
-  return cmp;
 }
 function SpansIntegerMultiple(a,b,r){
   // Does (a,b) span an a value that is an integer multiple of r?
@@ -1090,3 +1581,4 @@ Applet.prototype.PrintHQ = function(){
   // nuke buffer.
   // document.removeChild(canvas); // Doesn't work. Is this thing a memory leak? I don't think so - I htink the canvas vanishes when it goes out of scope.
 };
+*/
