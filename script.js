@@ -88,9 +88,8 @@ $(function(){
   }
 
 	if(urlParams.lines) { source_lines_per_unit_charge = urlParams.lines; }
-	if(urlParams.phi) { gPolar3d.phi = urlParams.phi;console.log(urlParams.phi); }
-	if(urlParams.theta) { gPolar3d.theta = urlParams.theta; }
-	// if(urlParams.theta) { this.theta = Math.PI; }
+	// if(urlParams.phi) { gPolar3d.rotateMe(0,urlParams.phi);}
+	// if(urlParams.theta) { gPolar3d.rotateMe(urlParams.theta,0);}
 /*
   $('#downloadlink').bind('click' ,function(ev) { 
     
@@ -146,10 +145,10 @@ EField3d.prototype.StartDraw = function(){
 	  else   urlparams += "&";
 	  urlparams += "q"+i+"=";
 	  urlparams += this.charges[i].q + "," + parseFloat(this.charges[i].x.toFixed(3)) + "," + (parseFloat(this.charges[i].y.toFixed(3))) + "," + (parseFloat(this.charges[i].z.toFixed(3)));
-	  urlparams+="&lines=" + source_lines_per_unit_charge;
-      urlparams+="&phi=" + this.phi;
-	  urlparams+="&theta=" + this.theta;
+      // urlparams+="&phi=" + this.phi;
+	  // urlparams+="&theta=" + this.theta;
 	}
+	  urlparams+="&lines=" + source_lines_per_unit_charge;
 	$('#linktothis').attr('href',urlparams);
 	this.DrawCharges();
     this.FindFieldLines();
