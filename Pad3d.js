@@ -106,8 +106,8 @@ function Pad3d( element, options ){
 
   $(this.element)   .bind('mousedown',  function(ev)   { return self.startDragging(ev); });
   $(window)         .bind('mouseup',    function(ev)   { return self.stopDragging(ev); });
-  $(window)         .bind('mousemove',  function(ev)   { return self.drag(ev); });
-  // $(this.element)   .bind('mousemove',  function(ev)   { return self.mouseMove(ev); });
+  // $(window)         .bind('mousemove',  function(ev)   { return self.drag(ev); });
+  $(this.element)   .bind('mousemove',  function(ev)   { return self.mouseMove(ev); });
 
   // note: iOS events get sent to start element, even if your finger leaves the boundaries of the element. Not doing this right leads to delays!
   $(this.element)   .bind('touchstart',  function(ev)   { return self.startDragging(ev); });
@@ -295,6 +295,7 @@ Pad3d.prototype.AddLine = function(x1,y1,z1,x2,y2,z2,width,color,source){
     b: Vector.create([x2,y2,z2,1]),
     linewidth: width,
     stroke: color,
+	selected: false,
     source: source,
 	fixed: false
   };
@@ -308,6 +309,7 @@ Pad3d.prototype.AddPoint = function(x1,y1,z1,size,fill,highlightfill,source){
     size: size,
     fill: fill,
     fillhighlight: highlightfill,
+	selected: false,
     linewidth: null,
     stroke: null,
     source: source
@@ -338,34 +340,11 @@ Pad3d.prototype.Draw = function(){
   this.Clear();
   this.DrawLines();
 }
-Pad3d.prototype.AddCoord = function(){
-	// this.AddFixedLine(10,this.height - 10,0,500,this.height - 10,0, 10, "BLACK",null);
-	var origin = {x: 0, y: 0, z: 0};
-	var axisLength = {x: -100, y: 100,z: -100};
-	this.AddLine(origin.x,origin.y,origin.z,origin.x + axisLength.x,origin.y,origin.z, 3, "GREEN",null);
-	this.AddLine(origin.x,origin.y,origin.z,origin.x,origin.y + axisLength.y,origin.z, 3, "GREEN",null);
-	this.AddLine(origin.x,origin.y,origin.z,origin.x,origin.y,origin.z + axisLength.z, 3, "GREEN",null);
-}
-Pad3d.prototype.AddBox = function(){
-	var origin = {x: 0, y: 0, z: 0};
-	var BoxScalar = 10000;
-	var lineSize = 100;
-	this.AddLine(BoxScalar,BoxScalar,BoxScalar,BoxScalar,BoxScalar,-BoxScalar    ,lineSize,"GREEN",null);
-	this.AddLine(-BoxScalar,BoxScalar,BoxScalar,BoxScalar,BoxScalar,-BoxScalar   ,lineSize,"GREEN",null);
-	this.AddLine(BoxScalar,-BoxScalar,BoxScalar,BoxScalar,BoxScalar,-BoxScalar   ,lineSize,"GREEN",null);
-	this.AddLine(-BoxScalar,-BoxScalar,BoxScalar,BoxScalar,BoxScalar,-BoxScalar  ,lineSize,"GREEN",null);
-	this.AddLine(BoxScalar,BoxScalar,BoxScalar,-BoxScalar,BoxScalar,BoxScalar    ,lineSize,"GREEN",null);
-	this.AddLine(BoxScalar,BoxScalar,BoxScalar,BoxScalar,BoxScalar,BoxScalar     ,lineSize,"GREEN",null);
-	this.AddLine(-BoxScalar,-BoxScalar,BoxScalar,-BoxScalar,BoxScalar,BoxScalar  ,lineSize,"GREEN",null);
-	this.AddLine(-BoxScalar,-BoxScalar,BoxScalar,BoxScalar,-BoxScalar,BoxScalar  ,lineSize,"GREEN",null);
-	this.AddLine(BoxScalar,BoxScalar,-BoxScalar,-BoxScalar,BoxScalar,-BoxScalar  ,lineSize,"GREEN",null);
-	this.AddLine(BoxScalar,BoxScalar,-BoxScalar,BoxScalar,BoxScalar,-BoxScalar   ,lineSize,"GREEN",null);
-	this.AddLine(-BoxScalar,-BoxScalar,-BoxScalar,-BoxScalar,BoxScalar,-BoxScalar,lineSize,"GREEN",null);
-	this.AddLine(-BoxScalar,-BoxScalar,-BoxScalar,BoxScalar,-BoxScalar,-BoxScalar,lineSize,"GREEN",null);
-}
 Pad3d.prototype.Linesort = function(l1,l2){
   // figure out which line is in front and which is behind.
   // Step 1: is zmax of 1 < zmin of 2?
+  if(l1.type == "p") if(l1.bz - l2.az < l1.size) return 2;
+  if(l2.type == "p") if(l1.bz - l2.az < l2.size) return -2;
   if(l1.bz < l2.az) return 1;
   // Step 2: is zmax of 2 < zmin of 1?
   if(l2.bz < l1.az) return -1;
@@ -388,7 +367,6 @@ Pad3d.prototype.DrawLines = function(){
   
   // var trans = this.transform_matrix;
   
-  // this.AddBox();
   
   var trans = Matrix.I(4);
   // console.log("Pad3d Draw ",this.camera_distance,this.theta,this.phi,this.look_at);
@@ -447,44 +425,7 @@ Pad3d.prototype.DrawLines = function(){
   {
     var obj = this.objects[i];
     // draw it.
-    if(obj.draw) {
-      if(obj.type=='l') {
-        // Line
-        // adjust line thickness for relative z.      
-        this.ctx.lineWidth = obj.linewidth/obj.meanz*this.proj_dist;
-        GeoUtils.draw_highlighted_line(
-           this.ctx,
-           this.width/2-obj.au, this.height/2-obj.av,
-           this.width/2-obj.bu, this.height/2-obj.bv,
-           this.ctx.lineWidth, //linewidth
-           obj.stroke, // default style
-           "rgba(250,0,0,0.9)", //highlight style
-           "rgba(0,0,0,0.7)", //outline style
-           this.should_highlight(obj),
-           this.should_outline(obj)
-         );
-        
-        // this.ctx.strokeStyle = obj.stroke;
-        // this.ctx.beginPath();
-        // this.ctx.moveTo(this.width/2-obj.au, this.height/2-obj.av);
-        // this.ctx.lineTo(this.width/2-obj.bu, this.height/2-obj.bv);
-        // this.ctx.stroke();
-        // this.ctx.closePath();
-      }
-      if(obj.type=='p') {
-        // Point
-        this.ctx.save();
-        this.ctx.translate(this.width/2-obj.au, this.height/2-obj.av);
-        this.ctx.scale(this.proj_dist/obj.meanz,this.proj_dist/obj.meanz);
-        this.ctx.beginPath();
-        this.ctx.arc(0,0,obj.size,0,Math.PI*2,true);
-        if(this.should_highlight(obj)) this.ctx.fillStyle = obj.fillhighlight;
-        else this.ctx.fillStyle = obj.fill;
-        this.ctx.fill();
-        this.ctx.closePath();
-        this.ctx.restore();
-      }
-    }
+	this.DrawObj(obj);
   }
   /*
   {
@@ -521,8 +462,50 @@ Pad3d.prototype.DrawLines = function(){
   
   this.ctx.restore();
 }
+Pad3d.prototype.DrawObj = function(obj){  
+	if(obj.draw) {
+      if(obj.type=='l') {
+        // Line
+        // adjust line thickness for relative z.      
+        this.ctx.lineWidth = obj.linewidth/obj.meanz*this.proj_dist;
+        GeoUtils.draw_highlighted_line(
+           this.ctx,
+           this.width/2-obj.au, this.height/2-obj.av,
+           this.width/2-obj.bu, this.height/2-obj.bv,
+           this.ctx.lineWidth, //linewidth
+           obj.stroke, // default style
+           "rgba(250,0,0,0.9)", //highlight style
+           "rgba(0,0,0,0.7)", //outline style
+           this.should_highlight(obj),
+           this.should_outline(obj)
+         );
+        
+        // this.ctx.strokeStyle = obj.stroke;
+        // this.ctx.beginPath();
+        // this.ctx.moveTo(this.width/2-obj.au, this.height/2-obj.av);
+        // this.ctx.lineTo(this.width/2-obj.bu, this.height/2-obj.bv);
+        // this.ctx.stroke();
+        // this.ctx.closePath();
+      }
+      if(obj.type=='p') {
+        // Point
+        this.ctx.save();
+        this.ctx.translate(this.width/2-obj.au, this.height/2-obj.av);
+        this.ctx.scale(this.proj_dist/obj.meanz,this.proj_dist/obj.meanz);
+        this.ctx.beginPath();
+        this.ctx.arc(0,0,obj.size,0,Math.PI*2,true);
+        // if(obj.shouldhighlight) this.ctx.fillStyle = obj.fillhighlight;
+        if(this.should_highlight(obj)) this.ctx.fillStyle = obj.fillhighlight;
+        else this.ctx.fillStyle = obj.fill;
+        this.ctx.fill();
+        this.ctx.closePath();
+        this.ctx.restore();
+      }
+    }
+}
 Pad3d.prototype.should_highlight = function(obj){
-  return false;
+	if(obj.type == "p") return obj.selected;
+  	else return false;
 }
 Pad3d.prototype.should_outline = function(obj){
   return false;
@@ -548,7 +531,6 @@ Pad3d.prototype.startDragging = function(ev){
 }
 Pad3d.prototype.stopDragging = function(ev){
   $(this.element).css("cursor","auto");
-  
   this.dragging = false;
 }
 Pad3d.prototype.drag = function(ev){
@@ -606,7 +588,10 @@ Pad3d.prototype.drag = function(ev){
 }
 // var sample =0;
 Pad3d.prototype.mouseMove = function(ev){
-  if(this.dragging) return;
+  if(this.dragging){
+	this.drag(ev);
+  	// return;
+  }
   // Called for any movement in pad.  
   // find highlighed object.
   // go through object list from back to front, so that the frontmost object will highlight.
@@ -632,18 +617,28 @@ Pad3d.prototype.mouseMove = function(ev){
         }
       }
       if(obj.type=='p') {
+		  if(obj.shouldhighlight){
+	  		obj.shouldhighlight = false;
+			this.DrawObj(obj);
+		  }
         var du = u - obj.au;
         var dv = v - obj.av;
         var d = Math.sqrt(du*du+dv*dv);
-        if( d < this.mouse_highlight_range*this.proj_dist/obj.meanz ) selected = obj.source;
+		console.log(obj.size*this.proj_dist/charge.meanz);
+        // if( d < this.mouse_highlight_range*this.proj_dist/obj.meanz ){
+        if( d < obj.size*this.proj_dist/obj.meanz ){
+			obj.shouldhighlight=true;
+			this.DrawObj(obj);
+        	selected = obj.source;
+        } 
       }
   }
   
-  
-  this.HoverObject(selected);  
+  this.HoverObject(selected);
 }
 Pad3d.prototype.HoverObject = function(selected){
-  console.log("Pad3d.HoverObject selected=",selected);
+  // console.log("Pad3d.HoverObject selected=",selected);
+  if(selected.type == "p") selected.selected = true;
 }
 Pad3d.prototype.scrollMe = function(ev,delta){
   console.log("scrollme",ev,delta);
