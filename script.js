@@ -1,9 +1,8 @@
 /*
 TODO
-Make it so I can add/move charges
+Make it so I can add charges
 Make it is so the node rotates when hit 
-	-RotatePhi
-Add a prespective
+	-RotatePhi does not work correctly
 Optimize SeedNodes
 */
 var TWO_PI = Math.PI * 2;
@@ -28,11 +27,10 @@ var max_y =  -1e20;
 var min_y =  1e20;
 this.trans = Matrix.I(4);
 this.chargeSelected = false;
-
-
+this.draggingCharge = false;
 $(function(){
 	gPolar3d = new EField3d($('#viewport'));
-	// $('#run_checkbox').change(doTimer);
+
 	/*	
   var self = this;
   $(window).bind('resize',function(ev) { return self.Resize(ev); });
@@ -66,22 +64,44 @@ $(function(){
 									gPolar3d.StartDraw();
     	                          }
   });
-  
+  // see if there's an override in the URL
+  gPolar3d.charges = [];
+  var urlParams;
+  var match,
+      pl     = /\+/g,  // Regex for replacing addition symbol with a space
+      search = /([^&=]+)=?([^&]*)/g,
+      decode = function (s) { return decodeURIComponent(s.replace(pl, " ")); },
+      query  = window.location.search.substring(1);
 
+  urlParams = {};
+  while (match = search.exec(query))
+         urlParams[decode(match[1])] = decode(match[2]);
 
+  for( p in urlParams ) {
+    if(p.match(/^q/)) {
+      var list = urlParams[p].split(',');
+      gPolar3d.charges.push({q:parseFloat(list[0]),
+                         x:parseFloat(list[1]),
+                         y:parseFloat(list[2]),
+                         z:parseFloat(list[3])});
+    }
+  }
+
+	if(urlParams.lines) { source_lines_per_unit_charge = urlParams.lines; }
+	if(urlParams.phi) { gPolar3d.phi = urlParams.phi;console.log(urlParams.phi); }
+	if(urlParams.theta) { gPolar3d.theta = urlParams.theta; }
+	// if(urlParams.theta) { this.theta = Math.PI; }
+/*
   $('#downloadlink').bind('click' ,function(ev) { 
     
     var dt = applet.canvas .toDataURL('image/png');
     this.href = dt;
     
     // return DoPrint($('#everything'),true);  
-  });
-  
+  });*/
   
 
-  	gPolar3d.charges = [];
   	gPolar3d.StartDraw();
-  // doTimer();
 });
 EField3d.prototype = new Pad3d;           
 EField3d.prototype.constructor = EField3d;
@@ -112,37 +132,37 @@ function EField3d( element, options ){
 }
 EField3d.prototype.StartDraw = function(){
 	this.objects = [];
-    // this.charges = [];
     if(this.charges.length==0) this.charges = [
                                 { q :  1, x : 150,  y: -50, z: 80},
                                 { q : -1, x : 51,  y: 50,  z: -150},
                                 { q :  1, x : -151, y: -150, z: 200},
-                                { q : -1, x : -50, y: 50,  z: 100},
+                                // { q : -1, x : -50, y: 50,  z: 100},
                                 ];
 
-
-
-    // if(this.charges.length==0) this.charges = [
-    //                             { q :  1, x : 100,  y: -20, z: 20},
-    //                             { q : -2, x : -100,   y: 20, z: -20},
-    //                             { q : -1, x : 50,   y:-200, z: 170},
-    //                             { q :  2, x : -150,   y:80, z: 200},
-    //                             ];
-
-
-
+  
+	var urlparams = "";
+	for(var i = 0; i< this.charges.length; i++) {
+	  if(i==0) urlparams+="?";
+	  else   urlparams += "&";
+	  urlparams += "q"+i+"=";
+	  urlparams += this.charges[i].q + "," + parseFloat(this.charges[i].x.toFixed(3)) + "," + (parseFloat(this.charges[i].y.toFixed(3))) + "," + (parseFloat(this.charges[i].z.toFixed(3)));
+	  urlparams+="&lines=" + source_lines_per_unit_charge;
+      urlparams+="&phi=" + this.phi;
+	  urlparams+="&theta=" + this.theta;
+	}
+	$('#linktothis').attr('href',urlparams);
 	this.DrawCharges();
     this.FindFieldLines();
 	this.DrawFieldLines();
 	this.Draw();
-	
+
+    // gPrintBuffer = this.ctx.toDataURL('image/png');
 	
 }
 EField3d.prototype.DrawCharges = function(){
 	this.FindTranslationalMatrix();
     for(var i=0 ;i<this.charges.length; i++) {
       var charge = this.charges[i];
-	  console.log("q: ",charge.q);
 	  this.FindChargePosition(charge);
       total_charge += charge.q;
 	  charge.times_seeded = 0;
@@ -183,13 +203,9 @@ EField3d.prototype.FindChargePosition = function(charge){
 	charge.tranz = p1.e(3);
 }
 EField3d.prototype.SetXYCoords = function(charge,u,v){
-	console.log("Hi.");
 	var XYZVector = Vector.create([u / this.proj_dist * charge.tranz,v / this.proj_dist * charge.tranz,charge.tranz,1]);
-	console.log("I'm not bitter.");
 	var inverseTrans = this.trans.inverse();
-	console.log("You getting here?");
 	if(inverseTrans){
-		console.log("inverseTrans is not null, ",inverseTrans);
 		var a = inverseTrans.x(XYZVector);
 		charge.x = a.e(1);
 		charge.y = a.e(2);
@@ -529,12 +545,14 @@ EField3d.prototype.mouseMove = function(ev){
 	//   }
   // Called for any movement in pad.  
   // find highlighed object.
-  // go through object list from back to front, so that the frontmost object will highlight.
+  // go through object list from back to front, so that the frontmost object will highlight.	
+	
   var offset = getAbsolutePosition(this.canvas);
   var x = ev.pageX - offset.x;
   var y = ev.pageY - offset.y;    
   var u = this.width/2 -x;  // Translate and flip inverse to screen coords
   var v = this.height/2-y;
+  
 
   var selected = null;
   for(var i=0;i<this.objects.length;i++)
@@ -638,12 +656,13 @@ EField3d.prototype.drag = function(ev){
 	        var du = u - charge.u;
 	        var dv = v - charge.v;
 	        var d = Math.sqrt(du*du+dv*dv);
-	        if( d < charge.r*this.proj_dist/charge.tranz*1.5 ){
+	        if( d < charge.r*this.proj_dist/charge.tranz*1.5 || (this.draggingCharge == i)){
+				this.draggingCharge = i;
+				console.log(this.draggingCharge);
 				this.SetXYCoords(charge,u,v);
 				this.StartDraw();
 	        }
 	    }
-		
    	}
 }
 EField3d.prototype.startDragging = function(ev){
@@ -658,34 +677,7 @@ EField3d.prototype.startDragging = function(ev){
     this.startDragY = ev.originalEvent.touches[0].pageY;       
     this.startDragTouch = true;
     ev.originalEvent.preventDefault();       
-  }
-  /*
-  	for(var i=0;i<this.objects.length;i++){
-	  var obj = this.objects[i];
-	  if(obj.selected){
-
-
-  		var offset = getAbsolutePosition(this.canvas);
-  		var x = ev.pageX - offset.x;
-  		var y = ev.pageY - offset.y;
-  		var u = this.width/2 -x;  // Translate and flip inverse to screen coords
-  		var v = this.height/2-y;
-  		this.FindTranslationalMatrix();
-  	    for(var i=0;i<this.charges.length;i++){
-  	    	var charge = this.charges[i];
-  			this.FindChargePosition(charge);
-  	        var du = u - charge.u;
-  	        var dv = v - charge.v;
-  	        var d = Math.sqrt(du*du+dv*dv);
-  	        if( d < charge.r*this.proj_dist/charge.tranz*1.5 ){
-  				this.SetXYCoords(charge,u,v);
-  				this.StartDraw();
-  	        }
-  	    }
-		
-		
-	  }
-	}*/
+  }	
   console.log("start drag "+this.startDragX+" "+this.startDragY);
   this.dragging = true;
   this.drag_button = ev.which;
@@ -695,6 +687,7 @@ EField3d.prototype.startDragging = function(ev){
 }
 EField3d.prototype.stopDragging = function(ev){
   $(this.element).css("cursor","auto");
+  this.draggingCharge = null;
   this.chargeSelected = false;
   this.dragging = false;
 }
