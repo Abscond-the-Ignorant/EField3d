@@ -276,8 +276,12 @@ div#controls .addcharge  {
     </div>
      -->
     <div style="display:inline-block; vertical-align: top;">
-      <div style="margin:5px"><a class="bttn" id="do-popup" href="#">More Help</a></div>
+      <div style="margin:5px"><a class="bttn" id="homelink" href='index.html' >Home</a></div>
       <div style="margin:5px"><a class="bttn" id="linkto2d" href="http://neutrino.otterbein.edu/~tagg/fieldlines/">Link to 2D</a></div>
+    </div>
+    <div style="display:inline-block; vertical-align: top;">
+      <div style="margin:5px"><a class="bttn" id="do-popup" href="#">More Help</a></div>
+
       <!-- <div style="margin:5px"><a class="bttn" id="downloadlink" href='#' download="FieldLines.png">Download Image</a></div> -->
       <div style="margin:5px"><a class="bttn" id="linktothis" href='#'>Link to this arrangement</a></div>
     </div>
@@ -330,6 +334,48 @@ div#controls .addcharge  {
       represent bound states; postive energies represent unstable (explosive) states.</li>
   </ul>
 
+	<h2>
+	  Examples:
+	</h2>
+	<li>
+		<a href="index.html?q0=1,0,-50,0&q1=-1,-20,50,0&lines=26"> A dipole </a>
+	</li>
+	<li>
+		<a href="index.html
+		?q0= 1,0,-200,-200
+		&q1= 1,0, 200, 200
+		&q2=-1,0, 200,-200
+		&q3=-1,0,-200, 200
+		&lines= 14"> A quadrapole </a>
+	</li>
+	<li>
+		<a href="index.html
+		?q0=1 ,-50,0,0
+		&q1=1 ,-40,0,0
+		&q2=1 ,-30,0,0
+		&q3=1 ,-20,0,0
+		&q4=1 ,-10,0,0
+		&q5=1 ,0  ,0,0
+		&q6=1 ,10 ,0,0
+		&q7=1 ,20 ,0,0
+		&q8=1 ,30 ,0,0
+		&q9=1 ,40 ,0,0
+		&q10=1,50 ,0,0
+		&q11=-1 ,-40,75,0
+		&q12=-1 ,-30,75,0
+		&q13=-1 ,-20,75,0
+		&q14=-1 ,-10,75,0
+		&q15=-1 ,0  ,75,0
+		&q16=-1 ,10 ,75,0
+		&q17=-1 ,20 ,75,0
+		&q18=-1 ,30 ,75,0
+		&q19=-1 ,40 ,75,0
+		&q20=-1 ,50 ,75,0
+		&q21=-1 ,-50,75,0
+		&lines=6"> Two lines of charge </a>
+	</li>
+
+	  
   <h2>
     About electric field lines:
   </h2>
@@ -349,29 +395,8 @@ div#controls .addcharge  {
   </h2>
     <ul>
       <li>  You can create custom arrangements by moving the charges where you like, and then right-clicking the "link to this arrangement" button.  Select "Copy this URL" and distribute to students or save for your own use. </li>
-      <li> Here's a useful example: <br/>
-        <a  href="?q1=-1,-1,-0.3
-&q2=-1,-1,-0.15
-&q3=-1,-1,0
-&q4=-1,-1,0.15
-&q5=-1,-1,0.3
-&q6=1,1,-0.15
-&q7=1,1,-0.3
-&q8=1,1,0
-&q9=1,1,0.15
-&q10=1,1,0.3
-&q11=-1,-1,-0.45
-&q12=-1,-1,-0.6
-&q14=-1,-1,0.45
-&q15=-1,-1,0.6
-&q16=1,1,-0.45
-&q17=1,1,-0.6
-&q19=1,1,0.45
-&q20=1,1,0.6">
-        Charged plates</a><br/>
-      </li>
       <li> If you want precise positioning, the URL format is <br/>
-          <span style="font-family:courier">index.html?q1=[charge1],[x1],[y1]&q2=[charge2],[x2],[y2]&....</span><br/>
+          <span style="font-family:courier">index.html?q1=[charge1],[x1],[y1],[z1]&q2=[charge2],[x2],[y2],[z2]&....</span><br/>
           where charge1 is the size of the first charge, x1 and y1 are the coordinates. (0,0) is the center of the screen.</li>
       <li> Add "&lines=10" to set the number of lines per unit charge to 10.</li>
       <li> Add "&hide1=1" to hide the labels on the charges (which is useful for online quizzes)</li>
@@ -401,7 +426,7 @@ div#controls .addcharge  {
     Interestingly, drawing field lines is not closed-form soluable. This applet works by a 'shooting' approximation.
   </p>
   <p>
-    The first charge is generated with a set of field lines coming out with equal spacing. This lines are then traced 
+    The first charge is generated with a set of field lines coming out with close to equal spacing. This lines are then traced 
     along the direction of the field until the line either connects to another charge or gets very far out of the simulation
     box.   
   </p>
@@ -416,9 +441,9 @@ div#controls .addcharge  {
     charges to try to even out the spacing, but this would make the simulation non-responsive.  
   </p>  
   <p>
-    Another problem occurs when a field line is shot out straight at another charge.  These lines are valid field lines, 
-    but diverge almost randomly at the midpoint between charges. For instance, see this 
-    <a href="index.html?q0=1,-1,1&q1=1,0.966785290628707,1.0260972716488732">example</a>.
+    Another problem occurs when a field line is shot out straight away from another charge.  These lines are valid field lines, 
+    but diverge almost randomly at the midpoint between charges because the E field is 0. For instance, see this 
+    <a href="index.html?q0=1,0,0,0&q1=-2,0,0,75&lines=14">example</a>.
   </p>
   <p>
     Source code is available for forking at <a href="https://github.com/nathanieltagg/fieldlines">https://github.com/nathanieltagg/fieldlines</a>
@@ -427,7 +452,14 @@ div#controls .addcharge  {
     Nathaniel Tagg, Dec 2014
   </p>
 </div>
+<!--
+Line going through 0 Efield
+index.html?q0=1,0,0,0&q1=-2,0,0,75&lines=14
 
+Good dipole
+index.html?q0=1,-50,-50,0&q1=-1,50,50,0&lines=26
+
+ -->
 
 
 </body>
